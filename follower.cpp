@@ -77,6 +77,8 @@ int main(){
     tv.tv_sec=1;
     tv.tv_usec=0;
 
+    //keep on listening
+
     while(true){
 
         FD_ZERO(&fr);
