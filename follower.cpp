@@ -45,7 +45,7 @@ int main(){
 
 
     nRet = bind(nsocket, (sockaddr*)&srv , sizeof(sockaddr));
-
+    //check the nRet value
     if(nRet<0){
         cout<<endl<<"failed to bind to  local port";
         closesocket(nsocket);
