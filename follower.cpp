@@ -1,6 +1,8 @@
 #include <iostream>
 #include <winsock2.h>
 #include <bits/stdc++.h>
+#include <fstream>
+
 #define PORT 9910
 using namespace std;
 
@@ -19,6 +21,8 @@ int main() {
     int nRet = 0;
     //Initialize the Socket
     WSADATA ws;
+
+    string logger_file="follower"+ to_string(PORT)+".txt";
 
     if (WSAStartup(MAKEWORD(2, 2), &ws) < 0) {
         cout << "WSA Failed";
@@ -132,6 +136,12 @@ int main() {
                         if(message_term_number > current_term) {
                             // Update the current term number
                             current_term = message_term_number;
+
+                            ofstream logfile(logger_file,ios::app);
+
+                            logfile<<buffer<<endl;
+
+                            logfile.close();
 
                             //we can add further processing here
 
