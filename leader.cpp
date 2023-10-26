@@ -6,8 +6,14 @@
 #include <vector>
 #include <cstring>
 #include "info.cpp"
-#define LEADER_PORT 9909
+#include <fstream>
+#include <thread>
+
 using namespace std;
+
+#define LEADER_PORT 9909
+#define ACK_PORT 9919
+
 
 struct ServerInfo {
     string ip;
@@ -20,8 +26,54 @@ map<string,int> followers;
 
 map<string,int> follower_map = follower_information.nodeInfoMap(followers);
 
+int term_number = 0;
 
-void broadcastMessage(const char* message) {
+bool keepRunning = true;
+
+void listenForAcks() {
+
+    SOCKET ackListenSocket = socket(AF_INET, SOCK_STREAM, 0);
+    if (ackListenSocket == INVALID_SOCKET) {
+        cout << "Socket creation failed for ack listener." << endl;
+        WSACleanup();
+        exit(EXIT_FAILURE);
+    }
+
+    sockaddr_in ackSrvAddr{};
+    ackSrvAddr.sin_family = AF_INET;
+    ackSrvAddr.sin_port = htons(ACK_PORT);
+    ackSrvAddr.sin_addr.s_addr = INADDR_ANY;
+
+    if (bind(ackListenSocket, (struct sockaddr*)&ackSrvAddr, sizeof(ackSrvAddr)) != 0) {
+        cout << "Binding failed for ack listener." << endl;
+        closesocket(ackListenSocket);
+        WSACleanup();
+        exit(EXIT_FAILURE);
+    }
+
+    if (listen(ackListenSocket, 5) != 0) {
+        cout << "Listen failed for ack listener." << endl;
+        closesocket(ackListenSocket);
+        WSACleanup();
+        exit(EXIT_FAILURE);
+    }
+
+    cout << "Server is listening for acknowledgements on port " << ACK_PORT << endl;
+
+    while (keepRunning) {
+        SOCKET ackClientSocket = accept(ackListenSocket, nullptr, nullptr);
+        char buffer[1024] = {0};
+        int bytesReceived = recv(ackClientSocket, buffer, sizeof(buffer) - 1, 0);
+        if (bytesReceived > 0) {
+            cout << "Received acknowledgement: " << buffer << endl;
+        }
+        closesocket(ackClientSocket);
+    }
+}
+
+
+
+void broadcastMessage(const char* message, int term) {
 
     for (const auto& server : follower_map) {
 
@@ -32,7 +84,10 @@ void broadcastMessage(const char* message) {
         outAddr.sin_addr.s_addr = inet_addr(server.first.c_str());
 
         if (connect(outSocket, (struct sockaddr*)&outAddr, sizeof(outAddr)) == 0) {
-            send(outSocket, message, strlen(message), 0);
+
+            string message_with_term = to_string(term) + "|" + message;
+            send(outSocket, message_with_term.c_str(), message_with_term.length(), 0);
+
             closesocket(outSocket);
         }
     }
@@ -44,6 +99,8 @@ int main() {
         cout << "WSA Failed" << endl;
         return 1;
     }
+
+    thread ackThread(listenForAcks);  // Start a new thread to listen for acknowledgements
 
     SOCKET listenSocket = socket(AF_INET, SOCK_STREAM, 0);
     if (listenSocket == INVALID_SOCKET) {
@@ -64,6 +121,7 @@ int main() {
         return 1;
     }
 
+
     if (listen(listenSocket, 5) != 0) {
         cout << "Listen failed." << endl;
         closesocket(listenSocket);
@@ -71,18 +129,38 @@ int main() {
         return 1;
     }
 
+
     cout << "Server is running and listening on port " << LEADER_PORT << endl;
 
-    while (true) {
+    while (keepRunning) {
+
+//        SOCKET followerSocket = acce
         SOCKET clientSocket = accept(listenSocket, nullptr, nullptr);
+
+
         char buffer[1024] = {0};
         int bytesReceived = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
         if (bytesReceived > 0) {
+
+            ofstream logfile("leader_logs.txt", ios::app);
+
+            logfile<<term_number<< "|" << buffer << endl;
+
+            logfile.close();
+
+            term_number++;
+
             cout << "Received message: " << buffer << endl;
-            // Broadcasting the message to other servers
-            broadcastMessage(buffer);
+            // Broadcasting the message to other followers
+            broadcastMessage(buffer,term_number);
         }
-        closesocket(clientSocket);
+
+        if (strcmp(buffer, "terminate") == 0) {
+            keepRunning = false;
+        }
+
     }
+    closesocket(listenSocket);
+    ackThread.join();  // This line will block the main thread if there's no way to exit the while loop in listenForAcks
 
 }

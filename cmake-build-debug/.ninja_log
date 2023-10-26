@@ -1,6 +1,4 @@
 # ninja log v5
-1	133	7198471954564781	build.ninja	14d10bff6ec1954d
-4	2763	7198458748923228	CMakeFiles/untitled.dir/main.cpp.obj	46f0a6b1f458f2d8
-10	1516	7198458736439079	CMakeFiles/untitled.dir/cache.cpp.obj	f2322c236f151ebc
+1	133	7200390986039749	build.ninja	14d10bff6ec1954d
 2763	2959	7198458750854103	untitled.exe	13351fc484d7ae72
 2	2488	7198463633886992	CMakeFiles/untitled.dir/client.cpp.obj	6bd7514b86fab178
