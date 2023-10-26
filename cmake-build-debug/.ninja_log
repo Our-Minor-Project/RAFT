@@ -2,3 +2,7 @@
 1	133	7200390986039749	build.ninja	14d10bff6ec1954d
 2763	2959	7198458750854103	untitled.exe	13351fc484d7ae72
 2	2488	7198463633886992	CMakeFiles/untitled.dir/client.cpp.obj	6bd7514b86fab178
+14	1837	7200472116259581	CMakeFiles/untitled.dir/info.cpp.obj	17acda47612fa8a1
+3	3344	7200472131324907	CMakeFiles/untitled.dir/client.cpp.obj	6bd7514b86fab178
+10	3376	7200472131634908	CMakeFiles/untitled.dir/follower.cpp.obj	24487de1c4680139
+19	3578	7200472133643456	CMakeFiles/untitled.dir/leader.cpp.obj	7f1c923c63bdca04
