@@ -64,4 +64,12 @@ public:
         followers.insert({"127.0.0.1", 9913});
         return followers;
     }
+
+    map<string, int> nodeHeartbeatMap(map<string, int>& followers) {
+        followers.insert({"127.0.0.1", 9960});
+        followers.insert({"127.0.0.1", 9961});
+        followers.insert({"127.0.0.1", 9963});
+        followers.insert({"127.0.0.1", 9965});
+        return followers;
+    }
 };

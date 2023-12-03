@@ -16,6 +16,24 @@ int nMaxFD;
 #define ACK_PORT 9919
 #define LEADER_IP "127.0.0.1"
 int current_term = 0;
+int current_index =0;
+
+
+void startElection(){
+
+    cout<<"started"<<endl;
+    //send vote request to all the servers
+    //wait for the response
+    //if majority of the servers respond with yes
+    //become the leader
+    //else
+    //wait for the next election
+
+
+}
+
+
+
 int main() {
 
     int nRet = 0;
@@ -75,27 +93,20 @@ int main() {
         cout << endl << "Listening to local port";
     }
 
-    nMaxFD = nsocket;
-
-    struct timeval tv{};
-    tv.tv_sec = 1;
-    tv.tv_usec = 0;
-
+    auto lastHeartbeatTime = chrono::system_clock::now();
     //keep on listening
 
     while (true) {
 
-        FD_ZERO(&fr);
-        FD_SET(nsocket, &fr);
+        auto now = chrono::system_clock::now();
 
-        nRet = select(nMaxFD + 1, &fr, nullptr, nullptr, &tv);
-
-        if (nRet < 0) {
-            cout << "Select error." << endl;
-            closesocket(nsocket);
-            WSACleanup();
-            exit(EXIT_FAILURE);
+        if(chrono::duration_cast<chrono::seconds>(now-lastHeartbeatTime).count() >5){
+            cout<<"Leader is dead"<<endl;
+            cout<<"Starting election..."<<endl;
+            startElection();
+            lastHeartbeatTime =now;
         }
+
 
         if (FD_ISSET(nsocket, &fr)) {
             struct sockaddr_in clientAddr{};
@@ -111,14 +122,24 @@ int main() {
 
                     cout << "Received message: " << endl;
                     cout << buffer << endl;
-
-
                     string received_data(buffer); //char array of size buffer
-
                     string term_in_str;
-
                     size_t i = 0;
 
+                    if(received_data.find("heartbeat|") != string::npos){
+                        size_t delimiterPos = received_data.find('|');
+                        if (delimiterPos != string::npos) {
+                            string index_str = received_data.substr(delimiterPos + 1);
+                            int receivedIndex = stoi(index_str);
+
+                            if(receivedIndex > current_index){
+                                current_index = receivedIndex;
+                                lastHeartbeatTime = chrono::system_clock::now(); //reset
+
+                            }
+
+                        }
+                    }
                     // Loop through the message until reaching the delimiter '|'
                     while(i < received_data.size() && received_data[i] != '|') {
                         if(isdigit(received_data[i])) {
@@ -126,7 +147,6 @@ int main() {
                         }
                         i++;                //loop through the received message , and find the term digit
                     }
-
 //                    cout<<received_data<<endl;
 
                     if(!term_in_str.empty()) {

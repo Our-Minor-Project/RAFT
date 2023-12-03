@@ -8,6 +8,7 @@
 #include "info.cpp"
 #include <fstream>
 #include <thread>
+#include <chrono>
 
 using namespace std;
 
@@ -25,6 +26,8 @@ Info follower_information;
 map<string,int> followers;
 
 map<string,int> follower_map = follower_information.nodeInfoMap(followers);
+
+map<string, int> heartbeat_map = follower_information.nodeHeartbeatMap(followers);
 
 int term_number = 0;
 
@@ -71,7 +74,25 @@ void listenForAcks() {
     }
 }
 
+void broadcastHeatBeat(const char* message, int index) {
 
+    for(const auto& server: heartbeat_map){
+
+        SOCKET outSocket = socket(AF_INET, SOCK_STREAM, 0);
+        sockaddr_in outAddr{};
+        outAddr.sin_family = AF_INET;
+        outAddr.sin_port = htons(server.second);
+        outAddr.sin_addr.s_addr = inet_addr(server.first.c_str());
+
+        if(connect(outSocket, (struct sockaddr*)&outAddr, sizeof(outAddr)) == 0){
+
+            string message_with_index = to_string(index) + "|" + message;
+            send(outSocket, message_with_index.c_str(), message_with_index.length(), 0);
+
+            closesocket(outSocket);
+        }
+    }
+}
 
 void broadcastMessage(const char* message, int term) {
 
@@ -93,6 +114,16 @@ void broadcastMessage(const char* message, int term) {
     }
 }
 
+
+void sendHeartbeats() {
+    while (true) {
+        string heartbeatMessage = "heartbeat|" + to_string(term_number);
+        broadcastHeatBeat(heartbeatMessage.c_str(), term_number);
+        this_thread::sleep_for(chrono::seconds(5)); // Send heartbeat every 5 seconds
+    }
+}
+
+
 int main() {
     WSADATA ws;
     if (WSAStartup(MAKEWORD(2,2),&ws) != 0) {
@@ -101,6 +132,8 @@ int main() {
     }
 
     thread ackThread(listenForAcks);  // Start a new thread to listen for acknowledgements
+
+    sendHeartbeats(); // Start a new thread to send heartbeats
 
     SOCKET listenSocket = socket(AF_INET, SOCK_STREAM, 0);
     if (listenSocket == INVALID_SOCKET) {
@@ -161,6 +194,7 @@ int main() {
 
     }
     closesocket(listenSocket);
+      // This line will block the main thread if there's no way to exit the while loop in sendHeartbeats
     ackThread.join();  // This line will block the main thread if there's no way to exit the while loop in listenForAcks
 
 }
